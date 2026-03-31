@@ -273,6 +273,7 @@ export default function App() {
   const [verRelatorio, setVerRelatorio] = useState(false);
   const [modalDados, setModalDados]   = useState(null);
   const [statusConexao, setStatusConexao] = useState("🔄 Conectando...");
+  const [verArquivados, setVerArquivados] = useState(false);
 
   // Carregamento
   useEffect(() => {
@@ -341,7 +342,21 @@ export default function App() {
     }
   }
 
-  function abrirLancarDados() { preencherExistentes(selId, novoDado.mes, novoDado.ano); setView("addDado"); }
+  function arquivarAtleta(id) {
+    setAtletas(prev => prev.map(a => a.id === id ? {...a, arquivado: true} : a));
+    setSelId(atletas.find(a => !a.arquivado && a.id !== id)?.id || 1);
+    setPendente(true);
+    showMsg("✅ Atleta arquivado! Clique em 💾 Salvar.");
+  }
+
+  function desarquivarAtleta(id) {
+    setAtletas(prev => prev.map(a => a.id === id ? {...a, arquivado: false} : a));
+    setPendente(true);
+    showMsg("✅ Atleta reativado! Clique em 💾 Salvar.");
+  }
+
+  const atletasAtivos = atletas?.filter(a => !a.arquivado) || [];
+  const atletasArquivados = atletas?.filter(a => a.arquivado) || [];
   function trocarAtletaForm(id) { setSelId(Number(id)); preencherExistentes(id, novoDado.mes, novoDado.ano); }
   function trocarMesForm(mes) { setNovoDado(p => ({...p, mes})); preencherExistentes(selId, mes, novoDado.ano); }
   function trocarAnoForm(ano) { setNovoDado(p => ({...p, ano})); preencherExistentes(selId, novoDado.mes, ano); }
@@ -389,7 +404,53 @@ export default function App() {
   return (
     <div style={{minHeight:"100vh",background:BG,color:"#fff",fontFamily:"'Segoe UI',sans-serif"}}>
       {verRelatorio && atleta && <RelatorioMobile atleta={atleta} dadosOrdenados={dadosOrdenados} ultimoDado={ultimoDado} onFechar={() => setVerRelatorio(false)}/>}
-      {modalDados && <ModalDados tipo={modalDados} atletas={atletas} onImportar={dados => { setAtletas(dados); setPendente(true); }} onFechar={() => setModalDados(null)}/>}
+      {verArquivados && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#1a1a1a",borderRadius:16,padding:28,maxWidth:540,width:"100%",border:`1px solid ${BORDER}`}}>
+            <div style={{fontSize:18,fontWeight:700,marginBottom:4,color:"#fff"}}>⚙️ Gerenciar Atletas</div>
+            <div style={{color:GRAY,fontSize:13,marginBottom:20}}>Arquive atletas inativos ou reative os arquivados. Os dados são preservados.</div>
+
+            {/* Atletas ativos */}
+            <div style={{fontSize:12,color:GRAY,fontWeight:700,marginBottom:8,letterSpacing:1}}>ATIVOS ({atletasAtivos.length})</div>
+            <div style={{maxHeight:200,overflowY:"auto",marginBottom:16}}>
+              {atletasAtivos.map(a => (
+                <div key={a.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#0d0d0d",borderRadius:8,marginBottom:6,border:`1px solid ${BORDER}`}}>
+                  <div>
+                    <div style={{color:"#fff",fontWeight:600,fontSize:13}}>{a.nome}</div>
+                    <div style={{color:GRAY,fontSize:11}}>{a.esporte||"—"} · {a.idade?`${a.idade} anos`:"—"}</div>
+                  </div>
+                  <button onClick={()=>arquivarAtleta(a.id)}
+                    style={{background:"#7f1d1d",color:"#fca5a5",border:"1px solid #dc2626",borderRadius:6,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    Arquivar
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Atletas arquivados */}
+            {atletasArquivados.length > 0 && <>
+              <div style={{fontSize:12,color:GRAY,fontWeight:700,marginBottom:8,letterSpacing:1}}>ARQUIVADOS ({atletasArquivados.length})</div>
+              <div style={{maxHeight:160,overflowY:"auto",marginBottom:16}}>
+                {atletasArquivados.map(a => (
+                  <div key={a.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#0d0d0d",borderRadius:8,marginBottom:6,border:`1px solid #333`,opacity:0.7}}>
+                    <div>
+                      <div style={{color:GRAY,fontWeight:600,fontSize:13}}>{a.nome}</div>
+                      <div style={{color:"#555",fontSize:11}}>{a.esporte||"—"} · {a.idade?`${a.idade} anos`:"—"}</div>
+                    </div>
+                    <button onClick={()=>desarquivarAtleta(a.id)}
+                      style={{background:"#1a3a1a",color:"#4ade80",border:"1px solid #16a34a",borderRadius:6,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      Reativar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>}
+
+            <button onClick={()=>setVerArquivados(false)} style={{background:"#333",color:"#fff",border:"none",borderRadius:6,padding:"10px 20px",fontWeight:700,cursor:"pointer",fontSize:13}}>Fechar</button>
+          </div>
+        </div>
+      )}
+
 
       {/* HEADER */}
       <div style={{background:"#0d0d0d",borderBottom:`1px solid ${BORDER}`,padding:"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
@@ -410,6 +471,7 @@ export default function App() {
             style={btn(pendente?"#16a34a":"#1a3a1a", {border:pendente?"2px solid #4ade80":"2px solid transparent", opacity:saving?0.7:1})}>
             {saving ? "⏳ Salvando..." : pendente ? "💾 Salvar agora" : "✅ Salvo"}
           </button>
+          <button style={btn("#555")} onClick={() => setVerArquivados(true)}>⚙️ Gerenciar</button>
           <button style={btn("#1d4ed8")} onClick={() => setModalDados("exportar")}>📤 Exportar</button>
           <button style={btn("#166534")} onClick={() => setModalDados("importar")}>📥 Importar</button>
           {[["dashboard","📊 Dashboard"],["addAtleta","➕ Novo Atleta"]].map(([v,lb]) => (
@@ -455,7 +517,7 @@ export default function App() {
           <div style={{marginBottom:16}}>
             <label style={labelStyle}>Atleta</label>
             <select style={inputStyle} value={selId} onChange={e => trocarAtletaForm(e.target.value)}>
-              {atletas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+              {atletasAtivos.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
             </select>
           </div>
           {atletas?.find(a => a.id === selId)?.dados.find(d => d.mes === Number(novoDado.mes) && d.ano === Number(novoDado.ano)) && (
@@ -498,7 +560,7 @@ export default function App() {
             <div style={{color:GRAY,fontSize:13}}>Relatório de Desempenho</div>
             <select style={{background:"#1a1a1a",border:`1px solid ${BORDER}`,borderRadius:6,color:ORANGE,padding:"6px 12px",fontSize:15,fontWeight:700,outline:"none"}}
               value={selId} onChange={e => setSelId(Number(e.target.value))}>
-              {atletas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+              {atletasAtivos.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
             </select>
             <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
               <div style={{color:GRAY,fontSize:13}}>Mês Atual: <span style={{color:"#fff",fontWeight:600}}>{ultimoDado ? mesLabel(ultimoDado) : "—"}</span></div>
