@@ -288,6 +288,13 @@ function ModalDados({ tipo, atletas, onImportar, onFechar }) {
           <div style={{ marginTop:12, background:"#7f1d1d", borderRadius:8, padding:"12px 16px" }}>
             <div style={{ color:"#fecaca", fontWeight:600, fontSize:13, marginBottom:10 }}>Atencao! Isso vai substituir TODOS os dados. Tem certeza?</div>
             <div style={{ display:"flex", gap:8 }}>
+              <button
+                onClick={function() { setVerCard(true); }}
+                disabled={!dadosOrdenados.some(function(d) { return d.cmj != null; })}
+                style={btn("#F97316", { opacity: !dadosOrdenados.some(function(d) { return d.cmj != null; }) ? 0.4 : 1 })}
+              >
+                Gerar Card CMJ
+              </button>
               <button onClick={confirmarImportar} style={{ background:"#dc2626", color:"#fff", border:"none", borderRadius:6, padding:"8px 16px", fontWeight:700, cursor:"pointer", fontSize:13 }}>Sim, importar</button>
               <button onClick={function() { setConfirmando(false); }} style={{ background:"#333", color:"#fff", border:"none", borderRadius:6, padding:"8px 16px", fontWeight:700, cursor:"pointer", fontSize:13 }}>Cancelar</button>
             </div>
@@ -354,7 +361,131 @@ function GerenciarAtletas({ atletas, onArquivar, onDesarquivar, onFechar }) {
   );
 }
 
-export default function App() {
+function CardCMJ({ atleta, dadosOrdenados, onFechar }) {
+  var dadosCMJ = dadosOrdenados.filter(function(d) { return d.cmj != null; });
+  var primeiro = dadosCMJ[0];
+  var ultimo   = dadosCMJ[dadosCMJ.length - 1];
+  var variacao = primeiro && ultimo && primeiro !== ultimo
+    ? (((ultimo.cmj - primeiro.cmj) / primeiro.cmj) * 100).toFixed(1)
+    : null;
+  var positivo = variacao && Number(variacao) >= 0;
+
+  var maxCMJ = Math.max.apply(null, dadosCMJ.map(function(d) { return d.cmj; }));
+  var minCMJ = Math.min.apply(null, dadosCMJ.map(function(d) { return d.cmj; }));
+  var range  = maxCMJ - minCMJ || 1;
+
+  var W = 260; var H = 60; var PAD = 16;
+  var iW = W - PAD * 2;
+  var iH = H - 16;
+
+  function xPos(i) { return PAD + (dadosCMJ.length > 1 ? i * iW / (dadosCMJ.length - 1) : iW / 2); }
+  function yPos(v) { return 8 + iH - ((v - minCMJ) / range) * iH; }
+
+  var pontos = dadosCMJ.map(function(d, i) { return xPos(i) + "," + yPos(d.cmj); }).join(" ");
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"#111", zIndex:4000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", overflowY:"auto", padding:"20px 0 40px" }}>
+
+      <div style={{ width:"100%", maxWidth:360, marginBottom:16, display:"flex", justifyContent:"flex-end", padding:"0 20px" }}>
+        <button onClick={onFechar} style={{ background:"#333", color:"#fff", border:"none", borderRadius:6, padding:"8px 16px", fontWeight:700, cursor:"pointer", fontSize:13 }}>Fechar</button>
+      </div>
+
+      <div style={{ width:320, background:"#111", borderRadius:20, overflow:"hidden", fontFamily:"'Segoe UI',sans-serif", border:"1px solid #2a2a2a" }}>
+
+        <div style={{ background:"#0d0d0d", padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", borderBottom:"3px solid #F97316" }}>
+          <svg width="220" height="88" viewBox="0 0 320 118" xmlns="http://www.w3.org/2000/svg">
+            <g fill="white">
+              <ellipse cx="62" cy="72" rx="28" ry="26"/>
+              <rect x="50" y="44" width="24" height="14" rx="4"/>
+              <path d="M54 44 Q62 28 70 44" stroke="white" strokeWidth="7" fill="none" strokeLinecap="round"/>
+              <ellipse cx="62" cy="40" rx="5" ry="4"/>
+            </g>
+            <text x="98" y="52" fontFamily="Arial Black,Arial" fontWeight="900" fontSize="32" fill="white" letterSpacing="2">CINTHYA</text>
+            <text x="98" y="84" fontFamily="Arial Black,Arial" fontWeight="900" fontSize="32" fill="white" letterSpacing="2">BRAUER</text>
+            <text x="100" y="108" fontFamily="Arial,sans-serif" fontWeight="400" fontSize="13" fill="#9CA3AF" letterSpacing="5">PERSONAL TRAINER</text>
+          </svg>
+        </div>
+
+        <div style={{ padding:"20px 20px 0" }}>
+          <div style={{ color:"#9CA3AF", fontSize:11, marginBottom:2 }}>Evolucao de desempenho</div>
+          <div style={{ color:"#F97316", fontSize:20, fontWeight:900, lineHeight:1.1 }}>{atleta.nome}</div>
+          <div style={{ color:"#9CA3AF", fontSize:12, marginTop:2 }}>
+            {atleta.esporte || ""}{atleta.esporte && atleta.idade ? " · " : ""}{atleta.idade ? atleta.idade + " anos" : ""}
+          </div>
+        </div>
+
+        <div style={{ padding:20 }}>
+          <div style={{ color:"#9CA3AF", fontSize:11, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>Salto CMJ</div>
+
+          {dadosCMJ.length === 0 && (
+            <div style={{ color:"#555", fontSize:13, textAlign:"center", padding:"20px 0" }}>Sem dados de CMJ registrados</div>
+          )}
+
+          {dadosCMJ.length === 1 && (
+            <div style={{ background:"#1a1a1a", borderRadius:12, padding:"20px", border:"2px solid #F97316", textAlign:"center" }}>
+              <div style={{ color:"#9CA3AF", fontSize:11, marginBottom:4 }}>{primeiro.label}</div>
+              <div style={{ color:"#fff", fontSize:40, fontWeight:900, lineHeight:1 }}>{primeiro.cmj}</div>
+              <div style={{ color:"#9CA3AF", fontSize:12, marginTop:4 }}>cm</div>
+            </div>
+          )}
+
+          {dadosCMJ.length >= 2 && (
+            <div>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+                <div style={{ flex:1, background:"#1a1a1a", borderRadius:12, padding:14, border:"1px solid #2a2a2a" }}>
+                  <div style={{ color:"#555", fontSize:10, marginBottom:4 }}>{primeiro.label}</div>
+                  <div style={{ color:"#9CA3AF", fontSize:26, fontWeight:900, lineHeight:1 }}>{primeiro.cmj}</div>
+                  <div style={{ color:"#555", fontSize:10 }}>cm</div>
+                </div>
+                <div style={{ color:"#F97316", fontSize:18, fontWeight:900 }}>→</div>
+                <div style={{ flex:1, background:"#1a1a1a", borderRadius:12, padding:14, border:"2px solid #F97316" }}>
+                  <div style={{ color:"#F97316", fontSize:10, marginBottom:4 }}>{ultimo.label}</div>
+                  <div style={{ color:"#fff", fontSize:26, fontWeight:900, lineHeight:1 }}>{ultimo.cmj}</div>
+                  <div style={{ color:"#9CA3AF", fontSize:10 }}>cm</div>
+                </div>
+              </div>
+
+              {variacao !== null && (
+                <div style={{ background: positivo ? "#1a3a1a" : "#3a1a1a", borderRadius:10, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", border: "1px solid " + (positivo ? "#166534" : "#7f1d1d"), marginBottom:16 }}>
+                  <span style={{ color: positivo ? "#4ade80" : "#f87171", fontSize:13, fontWeight:700 }}>Evolucao</span>
+                  <span style={{ color: positivo ? "#4ade80" : "#f87171", fontSize:22, fontWeight:900 }}>{positivo ? "+" : ""}{variacao}%</span>
+                </div>
+              )}
+
+              <div>
+                <div style={{ color:"#9CA3AF", fontSize:10, marginBottom:8, letterSpacing:1 }}>HISTORICO</div>
+                <svg width="100%" height="70" viewBox={"0 0 " + W + " " + (H + 12)} xmlns="http://www.w3.org/2000/svg">
+                  <line x1="0" y1={H} x2={W} y2={H} stroke="#2a2a2a" strokeWidth="1"/>
+                  {dadosCMJ.length > 1 && <polyline points={pontos} fill="none" stroke="#F97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>}
+                  {dadosCMJ.map(function(d, i) {
+                    var cx = xPos(i); var cy = yPos(d.cmj);
+                    var isLast = i === dadosCMJ.length - 1;
+                    return (
+                      <g key={i}>
+                        <circle cx={cx} cy={cy} r={isLast ? 5 : 4} fill="#F97316" stroke={isLast ? "#fff" : "none"} strokeWidth="1.5"/>
+                        <text x={cx} y={cy - 7} textAnchor="middle" fill={isLast ? "#fff" : "#9CA3AF"} fontSize="8" fontFamily="Arial" fontWeight={isLast ? "bold" : "normal"}>{d.cmj}</text>
+                        <text x={cx} y={H + 11} textAnchor="middle" fill={isLast ? "#F97316" : "#555"} fontSize="8" fontFamily="Arial">{d.label}</text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding:"12px 20px 20px", borderTop:"1px solid #2a2a2a", textAlign:"center" }}>
+          <div style={{ color:"#444", fontSize:10 }}>cinthyabrauer.com.br</div>
+        </div>
+
+      </div>
+
+      <div style={{ marginTop:16, color:"#555", fontSize:12, textAlign:"center", padding:"0 20px" }}>
+        Tire um print desta tela para compartilhar com o atleta
+      </div>
+    </div>
+  );
+}
   var [atletas, setAtletas]             = useState(null);
   var [selId, setSelId]                 = useState(1);
   var [view, setView]                   = useState("dashboard");
@@ -364,7 +495,7 @@ export default function App() {
   var [loading, setLoading]             = useState(true);
   var [saving, setSaving]               = useState(false);
   var [pendente, setPendente]           = useState(false);
-  var [verRelatorio, setVerRelatorio]   = useState(false);
+  var [verCard, setVerCard] = useState(false);
   var [modalDados, setModalDados]       = useState(null);
   var [verGerenciar, setVerGerenciar]   = useState(false);
   var [statusConexao, setStatusConexao] = useState("Conectando...");
@@ -555,7 +686,10 @@ export default function App() {
   return (
     <div style={{ minHeight:"100vh", background:BG, color:"#fff", fontFamily:"'Segoe UI',sans-serif" }}>
 
-      {verRelatorio && atleta && (
+      {verCard && atleta && (
+        <CardCMJ atleta={atleta} dadosOrdenados={dadosOrdenados} onFechar={function() { setVerCard(false); }} />
+      )}
+
         <RelatorioMobile atleta={atleta} dadosOrdenados={dadosOrdenados} ultimoDado={ultimoDado} onFechar={function() { setVerRelatorio(false); }} />
       )}
       {modalDados && (
